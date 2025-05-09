@@ -40,6 +40,11 @@ NSInteger const SJPresentViewTag = 0xFFFFFFF1;
 @end
 
 ///
+/// 拖动播放器视图后 改变size的通知（从大变小，或者从小变大）
+///
+NSNotificationName const SJVideoPlayerViewSizeDidChangeNotification = @"SJVideoPlayerViewSizeDidChangeNotification";
+
+///
 /// assetStatus 改变的通知
 ///
 NSNotificationName const SJVideoPlayerAssetStatusDidChangeNotification = @"SJVideoPlayerAssetStatusDidChangeNotification";

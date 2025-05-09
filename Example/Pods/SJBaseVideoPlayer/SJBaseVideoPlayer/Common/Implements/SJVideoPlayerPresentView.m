@@ -30,6 +30,8 @@
 @synthesize longPressHandler = _longPressHandler;
 @synthesize movingDirection = _movingDirection;
 @synthesize triggeredPosition = _triggeredPosition;
+@synthesize isFullscreen = _isFullscreen;
+@synthesize isFitOnScreen = _isFitOnScreen;
 
 - (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
@@ -299,12 +301,26 @@
             if ( ![self _isGestureSupported:SJPlayerGestureTypeMask_Pan] )
                 return NO;
 
-            CGPoint location = [_pan locationInView:self];
-            if ( location.x > self.bounds.size.width * 0.5 ) {
-                _triggeredPosition = SJPanGestureTriggeredPosition_Right;
-            }
-            else {
-                _triggeredPosition = SJPanGestureTriggeredPosition_Left;
+            BOOL isFullscreen =  _isFullscreen && _isFullscreen(self, type, [gestureRecognizer locationInView:self]);
+            BOOL isFitOnScreen = _isFitOnScreen && _isFitOnScreen(self, type, [gestureRecognizer locationInView:self]);
+            if (isFullscreen || isFitOnScreen) {
+                CGPoint location = [_pan locationInView:self];
+                if ( location.x > self.bounds.size.width * 0.5 ) {
+                    _triggeredPosition = SJPanGestureTriggeredPosition_Right;
+                }
+                else {
+                    _triggeredPosition = SJPanGestureTriggeredPosition_Left;
+                }
+            } else {
+                CGPoint location = [_pan locationInView:self];
+                if ( location.x > self.bounds.size.width * 0.67 ) {
+                    _triggeredPosition = SJPanGestureTriggeredPosition_Right;
+                }
+                else if (location.x < self.bounds.size.width * 0.33) {
+                    _triggeredPosition = SJPanGestureTriggeredPosition_Left;
+                } else {
+                    _triggeredPosition = SJPanGestureTriggeredPosition_Center;
+                }
             }
             
             CGPoint velocity = [_pan velocityInView:_pan.view];

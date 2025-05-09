@@ -330,14 +330,16 @@ typedef struct _SJPlayerControlInfo {
             switch ( direction ) {
                     /// 水平
                 case SJPanGestureMovingDirection_H: {
-                    NSTimeInterval duration = self.duration;
-                    NSTimeInterval previous = self.controlInfo->pan.offsetTime;
-                    CGFloat tlt = translate.x;
-                    CGFloat add = tlt / self.controlInfo->pan.factor * self.duration;
-                    CGFloat offsetTime = previous + add;
-                    if ( offsetTime > duration ) offsetTime = duration;
-                    else if ( offsetTime < 0 ) offsetTime = 0;
-                    self.controlInfo->pan.offsetTime = offsetTime;
+                    if (position != SJPanGestureTriggeredPosition_Center) {
+                        NSTimeInterval duration = self.duration;
+                        NSTimeInterval previous = self.controlInfo->pan.offsetTime;
+                        CGFloat tlt = translate.x;
+                        CGFloat add = tlt / self.controlInfo->pan.factor * self.duration;
+                        CGFloat offsetTime = previous + add;
+                        if ( offsetTime > duration ) offsetTime = duration;
+                        else if ( offsetTime < 0 ) offsetTime = 0;
+                        self.controlInfo->pan.offsetTime = offsetTime;
+                    }
                 }
                     break;
                     /// 垂直
@@ -357,6 +359,9 @@ typedef struct _SJPlayerControlInfo {
                             self.deviceVolumeAndBrightnessController.volume -= value;
                         }
                             break;
+                        case SJPanGestureTriggeredPosition_Center: {
+                        }
+                            break;
                     }
                 }
                     break;
@@ -370,14 +375,74 @@ typedef struct _SJPlayerControlInfo {
                 case SJPanGestureMovingDirection_V: { }
                     break;
             }
+            
+            if (position == SJPanGestureTriggeredPosition_Center) {
+                CGRect frame = self.view.frame;
+                CGRect newFrame = frame;
+                CGRect screenBounds = CGRectMake(7, 64, UIScreen.mainScreen.bounds.size.width - 14, UIScreen.mainScreen.bounds.size.height - 64 - 44);
+                BOOL isOriginalSize = CGRectGetWidth(newFrame) > (CGRectGetWidth(_originalFrame) - 1.0) &&
+                                      CGRectGetWidth(newFrame) < (CGRectGetWidth(_originalFrame) + 1.0); // 原来的大小
+                if (isOriginalSize) {
+                    if (CGRectGetMidY(frame) + 10 < CGRectGetMaxY(_originalFrame)) {
+                        // 如果拖动的Y距离不够大，就恢复原来的位置
+                        newFrame = _originalFrame;
+                    } else {
+                        // size变为原来的一半，计算新的宽度和高度
+                        CGFloat newWidth = frame.size.width * 0.5;
+                        CGFloat newHeight = frame.size.height * 0.5;
+                        // 计算新的 origin 以保持中心不变
+                        CGFloat newX = frame.origin.x + (frame.size.width - newWidth) / 2;
+                        CGFloat newY = frame.origin.y + (frame.size.height - newHeight) / 2;
+                        newFrame = CGRectMake(newX, newY, newWidth, newHeight);
+                    }
+                } else {
+                    // 接近_originalFrame的Y的时候，就恢复原来的frame
+                    if (CGRectGetMidY(frame) + 10 < CGRectGetMaxY(_originalFrame)) {
+                        newFrame = _originalFrame;
+                    }
+                }
+                // newFrame可能被修改过了，更新isOriginalSize
+                isOriginalSize = CGRectGetWidth(newFrame) > (CGRectGetWidth(_originalFrame) - 1.0) &&
+                                 CGRectGetWidth(newFrame) < (CGRectGetWidth(_originalFrame) + 1.0);
+                if (!isOriginalSize) {
+                    // 检查是否超出左边界
+                    if (CGRectGetMinX(newFrame) < CGRectGetMinX(screenBounds)) {
+                        newFrame.origin.x = CGRectGetMinX(screenBounds); // 吸附到左边缘
+                    }
+                    // 检查是否超出右边界
+                    else if (CGRectGetMaxX(newFrame) > CGRectGetMaxX(screenBounds)) {
+                        newFrame.origin.x = CGRectGetMaxX(screenBounds) - CGRectGetWidth(newFrame); // 吸附到右边缘
+                    }
+                    // 检查是否超出上边界
+                    if (CGRectGetMinY(newFrame) < CGRectGetMinY(screenBounds)) {
+                        newFrame.origin.y = CGRectGetMinY(screenBounds); // 吸附到上边缘
+                    }
+                    // 检查是否超出下边界
+                    else if (CGRectGetMaxY(newFrame) > CGRectGetMaxY(screenBounds)) {
+                        newFrame.origin.y = CGRectGetMaxY(screenBounds) - CGRectGetHeight(newFrame); // 吸附到下边缘
+                    }
+                }
+                NSValue *rectValue = [NSValue valueWithCGRect:newFrame];
+                [self _postNotification:SJVideoPlayerViewSizeDidChangeNotification userInfo:@{@"rectKey": rectValue}];
+                [UIView animateWithDuration:0.3 animations:^{
+                    self.view.frame = newFrame;
+                } completion:^(BOOL finished) {
+                }];
+            }
         }
             break;
     }
     
-    if ( direction == SJPanGestureMovingDirection_H ) {
+    if ( direction == SJPanGestureMovingDirection_H && position != SJPanGestureTriggeredPosition_Center) {
         if ( [self.controlLayerDelegate respondsToSelector:@selector(videoPlayer:panGestureTriggeredInTheHorizontalDirection:progressTime:)] ) {
             [self.controlLayerDelegate videoPlayer:self panGestureTriggeredInTheHorizontalDirection:state progressTime:self.controlInfo->pan.offsetTime];
         }
+    }
+    
+    if (position == SJPanGestureTriggeredPosition_Center) {
+        CGFloat newX = self.view.center.x + translate.x;
+        CGFloat newY = self.view.center.y + translate.y;
+        self.view.center = CGPointMake(newX, newY);
     }
 }
 
@@ -671,6 +736,11 @@ typedef struct _SJPlayerControlInfo {
     _view.presentView = _presentView;
 }
 
+- (void)setOriginalFrame:(CGRect)originalFrame {
+    _originalFrame = originalFrame;
+    _view.frame = originalFrame;
+}
+
 - (void)_setupViewControllerManager {
     if ( _viewControllerManager == nil ) _viewControllerManager = SJViewControllerManager.alloc.init;
     _viewControllerManager.fitOnScreenManager = _fitOnScreenManager;
@@ -757,6 +827,10 @@ typedef struct _SJPlayerControlInfo {
                                 return NO;
                         }
                             break;
+                            /// drag
+                        case SJPanGestureTriggeredPosition_Center: {
+                        }
+                            break;
                     }
                 }
             }
@@ -806,6 +880,18 @@ typedef struct _SJPlayerControlInfo {
         __strong typeof(_self) self = _self;
         if ( !self ) return;
         [self _handleLongPress:state];
+    };
+    
+    gestureController.isFullscreen = ^BOOL(id<SJGestureController>  _Nonnull control, SJPlayerGestureType type, CGPoint location) {
+        __strong typeof(_self) self = _self;
+        if ( !self ) return NO;
+        return self.isFullscreen;
+    };
+    
+    gestureController.isFitOnScreen = ^BOOL(id<SJGestureController>  _Nonnull control, SJPlayerGestureType type, CGPoint location) {
+        __strong typeof(_self) self = _self;
+        if ( !self ) return NO;
+        return self.isFitOnScreen;
     };
 }
 

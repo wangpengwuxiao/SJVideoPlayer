@@ -35,6 +35,8 @@ extern NSInteger const SJPresentViewTag;
 // - Playback Notifications -
 
 
+extern NSNotificationName const SJVideoPlayerViewSizeDidChangeNotification;
+
 extern NSNotificationName const SJVideoPlayerAssetStatusDidChangeNotification;
 extern NSNotificationName const SJVideoPlayerDefinitionSwitchStatusDidChangeNotification;
 

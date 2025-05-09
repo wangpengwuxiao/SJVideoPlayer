@@ -47,6 +47,7 @@ typedef NS_ENUM(NSUInteger, SJPanGestureMovingDirection) {
 /// 移动手势触发时的位置
 typedef NS_ENUM(NSUInteger, SJPanGestureTriggeredPosition) {
     SJPanGestureTriggeredPosition_Left,
+    SJPanGestureTriggeredPosition_Center,
     SJPanGestureTriggeredPosition_Right,
 };
 
@@ -72,6 +73,8 @@ typedef NS_ENUM(NSUInteger, SJLongPressGestureRecognizerState) {
 @property (nonatomic, copy, nullable) void(^panHandler)(id<SJGestureController> control, SJPanGestureTriggeredPosition position, SJPanGestureMovingDirection direction, SJPanGestureRecognizerState state, CGPoint translate);
 @property (nonatomic, copy, nullable) void(^pinchHandler)(id<SJGestureController> control, CGFloat scale);
 @property (nonatomic, copy, nullable) void(^longPressHandler)(id<SJGestureController> control, SJLongPressGestureRecognizerState state);
+@property (nonatomic, copy, nullable) BOOL(^isFullscreen)(id<SJGestureController> control, SJPlayerGestureType type, CGPoint location);
+@property (nonatomic, copy, nullable) BOOL(^isFitOnScreen)(id<SJGestureController> control, SJPlayerGestureType type, CGPoint location);
 
 - (void)cancelGesture:(SJPlayerGestureType)type;
 - (UIGestureRecognizerState)stateOfGesture:(SJPlayerGestureType)type;

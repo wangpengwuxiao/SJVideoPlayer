@@ -54,8 +54,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// \endcode
 ///
 @property (nonatomic, strong, readonly) __kindof UIView *view;
+@property (nonatomic, assign) CGRect originalFrame;
 @property (nonatomic, weak, nullable) id <SJVideoPlayerControlLayerDataSource> controlLayerDataSource;
 @property (nonatomic, weak, nullable) id <SJVideoPlayerControlLayerDelegate> controlLayerDelegate;
+
 @end
 
 
